@@ -28,9 +28,19 @@ A sample dataset is included in `many_modules_part_level.csv` and auto-loads on 
 
 ## Getting Started
 
-### 1) Run locally
+### 1) Open the hosted dashboard (recommended)
 
-Because the page fetches the CSV file, open it through a local web server (not `file://`).
+You can access the dashboard directly via GitHub Pages:
+
+```text
+https://gbordapoo-assent.github.io/Response-Rate-Dashboard/
+```
+
+No installation is required for normal use.
+
+### 2) Run locally (optional, for development)
+
+If you want to run the project locally, serve it through a local web server (not `file://`) because the page fetches the CSV file.
 
 From the project root:
 
@@ -44,7 +54,7 @@ Then open:
 http://localhost:8000
 ```
 
-### 2) Load your own CSV (optional)
+### 3) Load your own CSV (optional)
 
 Use the file picker in the UI to load another CSV.
 
