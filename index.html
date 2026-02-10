@@ -446,6 +446,34 @@
         `${sel ? `Highlighted: ${sel}` : 'No client highlighted'} · ${deltaMsg}.`;
     }
 
+    const DEFAULT_CSV_URL = './many_modules_part_level.csv';
+
+    function handleParsedResults(results) {
+      csvData = (results.data || []).filter(r => r && pick(r, Fields.date) && pick(r, Fields.client));
+      if (!csvData.length) {
+        alert('No valid rows found. Check your headers.');
+        return;
+      }
+      activeClient = null; // reset highlight on new file
+      clientSelect.value = '';
+      populateModules(csvData);
+      render(deltaToggle.checked);
+    }
+
+    function parseCsvText(csvText) {
+      Papa.parse(csvText, {
+        header: true,
+        skipEmptyLines: true,
+        transformHeader: h => String(h).trim(),
+        transform: v => (typeof v === 'string' ? v.trim() : v),
+        complete: handleParsedResults,
+        error: (err) => {
+          console.error('CSV parse error:', err);
+          alert('Could not parse CSV. See console for details.');
+        }
+      });
+    }
+
     // ---- Events ----
     fileInput.addEventListener('change', (e) => {
       const file = e.target.files?.[0];
@@ -455,23 +483,26 @@
         skipEmptyLines: true,
         transformHeader: h => String(h).trim(),
         transform: v => (typeof v === 'string' ? v.trim() : v),
-        complete: (results) => {
-          csvData = (results.data || []).filter(r => r && pick(r, Fields.date) && pick(r, Fields.client));
-          if (!csvData.length) {
-            alert('No valid rows found. Check your headers.');
-            return;
-          }
-          activeClient = null; // reset highlight on new file
-          clientSelect.value = '';
-          populateModules(csvData);
-          render(deltaToggle.checked);
-        },
+        complete: handleParsedResults,
         error: (err) => {
           console.error('CSV parse error:', err);
           alert('Could not parse CSV. See console for details.');
         }
       });
     });
+
+    async function loadDefaultCsv() {
+      try {
+        const response = await fetch(DEFAULT_CSV_URL, { cache: 'no-store' });
+        if (!response.ok) {
+          throw new Error(`Fetch failed: ${response.status}`);
+        }
+        const csvText = await response.text();
+        parseCsvText(csvText);
+      } catch (err) {
+        console.error('Auto-load CSV failed:', err);
+      }
+    }
 
     clientSelect.addEventListener('change', () => {
       activeClient = clientSelect.value || null;
@@ -503,6 +534,10 @@
       activeClient = null;
       clientSelect.value = '';
       render(deltaToggle.checked);
+    });
+
+    window.addEventListener('DOMContentLoaded', () => {
+      loadDefaultCsv();
     });
   </script>
 </body>
