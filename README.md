@@ -1,3 +1,5 @@
+![The Automated Compliance Trend Reporting Framework](assets/automated-compliance-trend-reporting-framework.png)
+
 # Response Rate Dashboard
 
 A lightweight, single-page dashboard for exploring response-rate trends by client over time.
