@@ -1,7 +1,5 @@
 ![The Automated Compliance Trend Reporting Framework](assets/automated-compliance-trend-reporting-framework.png)
 
-> If the image does not render on GitHub, make sure the file exists at `assets/automated-compliance-trend-reporting-framework.png` and is committed/pushed to the same branch.
-
 # Response Rate Dashboard
 
 A lightweight, single-page dashboard for exploring response-rate trends by client over time.
