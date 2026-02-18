@@ -193,10 +193,6 @@
           <option value="">— All SubModules —</option>
         </select>
 
-        <select id="xStartSelect" title="Choose where the X-axis starts">
-          <option value="">— X-axis Start: Earliest —</option>
-        </select>
-
         <select id="clientSelect">
           <option value="">— Highlight a Client —</option>
         </select>
@@ -219,7 +215,6 @@
     const deltaToggle    = document.getElementById('deltaToggle');
     const moduleSelect   = document.getElementById('moduleSelect');
     const subModuleSelect= document.getElementById('subModuleSelect');
-    const xStartSelect   = document.getElementById('xStartSelect');
     const statusEl       = document.getElementById('status');
     const ctx            = document.getElementById('responseChart').getContext('2d');
 
@@ -227,7 +222,6 @@
     let csvData = [];
     let allClients = [];
     let labelsSorted = [];
-    let visibleLabels = [];
     let activeClient = null; // client highlighted via click or dropdown
 
     // ---- Helpers ----
@@ -393,10 +387,10 @@
       return { rateMap, deltaMap };
     }
 
-    function buildLineDatasets(rateMap, labels) {
+    function buildLineDatasets(rateMap) {
       return allClients.map((client,i) => {
         const map = rateMap[client] || {};
-        const series = labels.map(lbl => map[lbl] ?? null);
+        const series = labelsSorted.map(lbl => map[lbl] ?? null);
         const col = baseColors[i % baseColors.length];
         return {
           label: client + ' - Response Rate',
@@ -415,13 +409,13 @@
       });
     }
 
-    function buildDeltaDataset(deltaMap, selectedClient, labels) {
+    function buildDeltaDataset(deltaMap, selectedClient) {
       let dataAligned = [];
       if (selectedClient) {
         const map = deltaMap[selectedClient] || {};
-        dataAligned = labels.map(lbl => map[lbl] ?? null);
+        dataAligned = labelsSorted.map(lbl => map[lbl] ?? null);
       } else {
-        dataAligned = labels.map(lbl => {
+        dataAligned = labelsSorted.map(lbl => {
           let sum = 0, cnt = 0;
           allClients.forEach(c => {
             const v = (deltaMap[c] || {})[lbl];
@@ -449,31 +443,6 @@
       };
     }
 
-    function getVisibleLabels() {
-      const selectedStart = xStartSelect.value || null;
-      if (!selectedStart) return [...labelsSorted];
-      const startMillis = parseDateMillis(selectedStart);
-      if (startMillis === null) return [...labelsSorted];
-      return labelsSorted.filter(lbl => {
-        const ms = parseDateMillis(lbl);
-        return ms !== null && ms >= startMillis;
-      });
-    }
-
-    function populateXStartOptions() {
-      const previous = xStartSelect.value || '';
-      xStartSelect.innerHTML = '<option value="">— X-axis Start: Earliest —</option>';
-      labelsSorted.forEach(lbl => {
-        const opt = document.createElement('option');
-        opt.value = lbl;
-        opt.textContent = `Start at ${lbl}`;
-        xStartSelect.appendChild(opt);
-      });
-      if (previous && labelsSorted.includes(previous)) {
-        xStartSelect.value = previous;
-      }
-    }
-
     function getSelectedClient(){ return activeClient || (clientSelect.value || null); }
 
     function render(showDelta=false) {
@@ -486,24 +455,15 @@
       }
 
       computeLabels(rows);
-      populateXStartOptions();
-      visibleLabels = getVisibleLabels();
-
-      if (!visibleLabels.length) {
-        if (chart) chart.destroy();
-        statusEl.textContent = 'No data points on or after the selected X-axis start date.';
-        return;
-      }
-
       populateClients(rows);
       const { rateMap, deltaMap } = buildMaps(rows);
-      const datasets = buildLineDatasets(rateMap, visibleLabels);
-      if (showDelta) datasets.push(buildDeltaDataset(deltaMap, getSelectedClient(), visibleLabels));
+      const datasets = buildLineDatasets(rateMap);
+      if (showDelta) datasets.push(buildDeltaDataset(deltaMap, getSelectedClient()));
 
       if (chart) chart.destroy();
       chart = new Chart(ctx, {
         type: 'line',
-        data: { labels: visibleLabels, datasets },
+        data: { labels: labelsSorted, datasets },
         options: {
           responsive: true,
           maintainAspectRatio: false,
@@ -557,7 +517,7 @@
             if (deltaToggle.checked) {
               const rowsNow = getFilteredRows();
               const { deltaMap } = buildMaps(rowsNow);
-              const bar = buildDeltaDataset(deltaMap, getSelectedClient(), visibleLabels);
+              const bar = buildDeltaDataset(deltaMap, getSelectedClient());
               // remove any existing bar dataset
               chart.data.datasets = chart.data.datasets.filter(d => d.type !== 'bar');
               chart.data.datasets.push(bar);
@@ -604,12 +564,11 @@
       const sel = getSelectedClient();
       const m = moduleSelect.value || 'All Modules';
       const s = (!subModuleSelect.disabled && subModuleSelect.value) ? subModuleSelect.value : 'All SubModules';
-      const xStartMsg = xStartSelect.value || (visibleLabels[0] || 'Earliest');
       const deltaMsg = deltaToggle.checked
         ? (sel ? `Delta bars: ${sel}` : 'Delta bars: average across clients')
         : 'Delta bars hidden';
       statusEl.textContent =
-        `Module: ${m} · SubModule: ${s} · X-axis start: ${xStartMsg} · ` +
+        `Module: ${m} · SubModule: ${s} · ` +
         `${sel ? `Highlighted: ${sel}` : 'No client highlighted'} · ${deltaMsg}.`;
     }
 
