@@ -4,667 +4,135 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Response Rate by Client</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,400;0,500;0,600;0,700;1,500&display=swap" rel="stylesheet">
 
-  <!-- Chart.js UMD (auto-registers all components) -->
+  <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
   <!-- PapaParse -->
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-
-  <style>
-    :root{
-      --bg-start:#1f4f78;
-      --bg-end:#0aa5a4;
-      --panel:rgba(255,255,255,0.95);
-      --panel-border:rgba(255,255,255,0.24);
-      --fg:#0f2943;
-      --fg-muted:#40607f;
-      --white:#ffffff;
-      --grid:rgba(15,41,67,0.1);
-      --accent:#10b1b4;
-    }
-    * { box-sizing: border-box; }
-    body {
-      font-family: 'Montserrat', Arial, sans-serif;
-      margin: 0;
-      min-height: 100vh;
-      color: var(--fg);
-      background: linear-gradient(120deg, var(--bg-start), var(--bg-end));
-      position: relative;
-      overflow-x: hidden;
-    }
-    body::before {
-      content: '';
-      position: fixed;
-      inset: 0;
-      background-image:
-        radial-gradient(circle at 8% 20%, rgba(12, 43, 74, 0.28) 0 60px, transparent 61px),
-        radial-gradient(circle at 16% 65%, rgba(12, 43, 74, 0.22) 0 70px, transparent 71px),
-        radial-gradient(circle at 88% 22%, rgba(7, 55, 90, 0.2) 0 90px, transparent 91px),
-        radial-gradient(circle at 80% 72%, rgba(7, 55, 90, 0.16) 0 120px, transparent 121px);
-      pointer-events: none;
-      z-index: 0;
-    }
-    .dashboard {
-      position: relative;
-      z-index: 1;
-      width: min(1450px, 95vw);
-      margin: 28px auto;
-    }
-    .top-bar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 24px;
-      color: var(--white);
-      gap: 16px;
-      flex-wrap: wrap;
-    }
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-    }
-    .logo-mark {
-      width: 34px;
-      height: 34px;
-      position: relative;
-      transform: rotate(180deg);
-    }
-    .logo-mark::before,
-    .logo-mark::after,
-    .logo-core {
-      content: '';
-      position: absolute;
-      width: 0;
-      height: 0;
-      border-left: 10px solid transparent;
-      border-right: 10px solid transparent;
-      border-top: 16px solid var(--white);
-    }
-    .logo-mark::before { top: 0; left: 7px; }
-    .logo-core { top: 11px; left: 0; opacity: 0.85; }
-    .logo-mark::after { top: 11px; left: 14px; opacity: 0.85; }
-    .brand-text {
-      font-size: 50px;
-      letter-spacing: 0.4px;
-      font-weight: 700;
-      line-height: 1;
-    }
-    .brand-tagline {
-      font-style: italic;
-      font-size: 22px;
-      opacity: 0.95;
-      text-align: right;
-      font-weight: 500;
-    }
-    .panel {
-      background: var(--panel);
-      border: 1px solid var(--panel-border);
-      border-radius: 18px;
-      backdrop-filter: blur(4px);
-      box-shadow: 0 20px 40px rgba(8, 24, 45, 0.3);
-      padding: 20px;
-    }
-    h2 {
-      text-align: center;
-      font-size: 30px;
-      margin: 4px 0 20px;
-      color: var(--fg);
-      font-weight: 700;
-    }
-    .controls{
-      display:flex;
-      gap:12px;
-      justify-content:center;
-      align-items:center;
-      flex-wrap:wrap;
-      margin-bottom:12px;
-    }
-    input[type="file"], select, label { font-size: 14px; font-weight: 500; }
-    select,
-    input[type="file"] {
-      padding:8px 10px;
-      border: 1px solid rgba(15,41,67,0.24);
-      border-radius: 8px;
-      background: #f8fbff;
-      color: var(--fg);
-    }
-    select:focus,
-    input[type="file"]:focus { outline: 2px solid rgba(16,177,180,0.5); }
-    label { display:flex; gap:8px; align-items:center; }
-    .status {
-      text-align:center;
-      font-size: 16px;
-      font-weight: 600;
-      color: var(--fg-muted);
-      margin: 8px 0 14px;
-    }
-    .chart-container {
-      position: relative;
-      width: 100%;
-      max-width: 1400px;
-      height: 700px;
-      margin: 0 auto;
-      background: #ffffff;
-      border-radius: 12px;
-      padding: 20px;
-      box-shadow: inset 0 0 0 1px rgba(15,41,67,0.06);
-      border: 1px solid rgba(15,41,67,0.08);
-    }
-    canvas { width: 100% !important; height: 100% !important; cursor: crosshair; }
-    @media (max-width: 880px) {
-      .top-bar {
-        justify-content: center;
-        text-align: center;
-      }
-      .brand-tagline {
-        width: 100%;
-        text-align: center;
-      }
-      .brand-text { font-size: 42px; }
-      .chart-container { height: 560px; }
-    }
-  </style>
 </head>
 <body>
-  <div class="dashboard">
-    <div class="top-bar">
-      <div class="brand" aria-label="Assent logo">
-        <div class="logo-mark"><span class="logo-core"></span></div>
-        <div class="brand-text">Assent</div>
-      </div>
-      <div class="brand-tagline">Faster Intelligence. Stronger Supply Chains.</div>
-    </div>
 
-    <div class="panel">
-      <h2>Response Rate by Client</h2>
+<input type="file" id="csvFile" accept=".csv" />
+<canvas id="responseChart"></canvas>
 
-      <div class="controls">
-        <input type="file" id="csvFile" accept=".csv" />
+<script>
+const fileInput = document.getElementById('csvFile');
+const ctx = document.getElementById('responseChart').getContext('2d');
 
-        <!-- Module / SubModule filters -->
-        <select id="moduleSelect">
-          <option value="">— All Modules —</option>
-        </select>
-        <select id="subModuleSelect" disabled>
-          <option value="">— All SubModules —</option>
-        </select>
+let chart;
+let csvData = [];
 
-        <select id="clientSelect">
-          <option value="">— Highlight a Client —</option>
-        </select>
-        <label><input type="checkbox" id="deltaToggle"> Show Submission Delta</label>
-      </div>
+const Fields = {
+  date:   ['SnapshotDate','Date'],
+  client: ['ClientDBName','Client'],
+  rate:   ['SubmissionRate','ResponseRate'],
+};
 
-      <div class="status" id="status">
-        Click a line to spotlight it. Others stay visible but lighter. Legend hidden to avoid clutter.
-      </div>
+function pick(row, keys){
+  for(const k of keys){
+    if (k in row) return row[k];
+  }
+  return undefined;
+}
 
-      <div class="chart-container">
-        <canvas id="responseChart"></canvas>
-      </div>
-    </div>
-  </div>
+function parseDateMillis(s) {
+  if (!s) return null;
+  return new Date(s).getTime();
+}
 
-  <script>
-    const fileInput      = document.getElementById('csvFile');
-    const clientSelect   = document.getElementById('clientSelect');
-    const deltaToggle    = document.getElementById('deltaToggle');
-    const moduleSelect   = document.getElementById('moduleSelect');
-    const subModuleSelect= document.getElementById('subModuleSelect');
-    const statusEl       = document.getElementById('status');
-    const ctx            = document.getElementById('responseChart').getContext('2d');
+function render() {
+  if (!csvData.length) return;
 
-    let chart;
-    let csvData = [];
-    let allClients = [];
-    let labelsSorted = [];
-    let activeClient = null; // client highlighted via click or dropdown
+  const labels = [...new Set(csvData.map(r => pick(r, Fields.date)))]
+    .sort((a,b)=>parseDateMillis(a)-parseDateMillis(b));
 
-    // ---- Helpers ----
-    const trim = v => (typeof v === 'string' ? v.trim() : v);
-    const toNum = v => {
-      if (v === null || v === undefined) return null;
-      const s = String(v).trim().replace(/%/g,'').replace(/,/g,'');
-      if (s === '') return null;
-      const n = Number(s);
-      return Number.isFinite(n) ? n : null;
+  const clients = [...new Set(csvData.map(r => pick(r, Fields.client)))];
+
+  const datasets = clients.map((client,i)=>{
+    const data = labels.map(date=>{
+      const row = csvData.find(r =>
+        pick(r, Fields.client)===client &&
+        pick(r, Fields.date)===date
+      );
+      return row ? Number(pick(row, Fields.rate)) : null;
+    });
+    return {
+      label: client,
+      data,
+      borderWidth: 2,
+      tension: 0.25
     };
+  });
 
-    // Colors (12 distinct). We'll keep base colors to re-apply with alpha for dimming
-    const baseColors = ['#2563eb','#f97316','#16a34a','#a855f7','#dc2626','#0891b2','#7c3aed','#059669','#ea580c','#0ea5e9','#ca8a04','#d946ef'];
+  if (chart) chart.destroy();
 
-    function hexToRgba(hex, alpha=1) {
-      if (!hex) return `rgba(0,0,0,${alpha})`;
-      if (hex.startsWith('rgba')) {
-        return hex.replace(/rgba\(([^)]+)\)/, (m, inner)=>
-          `rgba(${inner.split(',').slice(0,3).join(',')},${alpha})`
-        );
-      }
-      if (!hex.startsWith('#')) return hex; // assume already a css color
-      const h = hex.replace('#','');
-      const bigint = parseInt(h.length === 3 ? h.split('').map(c=>c+c).join('') : h, 16);
-      const r = (bigint >> 16) & 255, g = (bigint >> 8) & 255, b = bigint & 255;
-      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-    }
-
-    // Header aliases for robustness
-    const Fields = {
-      date:   ['SnapshotDate','Snapshot Date','Date','snapshotdate'],
-      client: ['ClientDBName','Client DB Name','Client','client','ClientName'],
-      rate:   ['SubmissionRate','Submission Rate','ResponseRate','Response Rate','Rate'],
-      // include both singular and plural spellings
-      delta:  ['SubmissionsDelta','SubmissionDelta','Submission Delta','Delta','DeltaSubmission','Change'],
-      module: ['ModuleName','Module Name','Module','module'],
-      subModule: ['SubModuleName','SubModule Name','SubModule','Sub Module','submodule']
-    };
-    function pick(row, keys){ for(const k of keys){ if (k in row) return row[k]; } return undefined; }
-
-    // Parse date -> millis (supports YYYY-MM-DD, M/D/YYYY, ISO-ish fallbacks)
-    function parseDateMillis(s) {
-      if (!s) return null;
-      const str = String(s).trim(); let y,m,d;
-      if (/^[0-9]{4}-[0-9]{1,2}-[0-9]{1,2}$/.test(str)) {
-        [y,m,d]=str.split('-').map(n=>parseInt(n,10));
-      } else if (/^[0-9]{1,2}\/[0-9]{1,2}\/[0-9]{4}$/.test(str)) {
-        [m,d,y]=str.split('/').map(n=>parseInt(n,10));
-      } else {
-        const t = Date.parse(str);
-        return Number.isNaN(t)?null:t;
-      }
-      if (!y||!m||!d) return null;
-      return new Date(y, m-1, d).getTime();
-    }
-
-    // Get rows filtered by Module/SubModule selection
-    function getFilteredRows() {
-      const selectedModule    = moduleSelect.value || null;
-      const selectedSubModule = subModuleSelect.value || null;
-      if (!selectedModule && !selectedSubModule) return csvData;
-
-      return csvData.filter(r => {
-        const mVal = trim(pick(r, Fields.module));
-        const sVal = trim(pick(r, Fields.subModule));
-        if (selectedModule && mVal !== selectedModule) return false;
-        if (selectedSubModule && sVal !== selectedSubModule) return false;
-        return true;
-      });
-    }
-
-    function computeLabels(data) {
-      const uniq = new Set();
-      data.forEach(r => {
-        const d = trim(pick(r, Fields.date));
-        if (d) uniq.add(d);
-      });
-      labelsSorted = [...uniq]
-        .filter(ds => parseDateMillis(ds) !== null)
-        .sort((a,b) => parseDateMillis(a) - parseDateMillis(b));
-    }
-
-    function populateClients(data) {
-      allClients = [...new Set(
-        data.map(r => trim(pick(r, Fields.client))).filter(Boolean)
-      )].sort();
-
-      const prevActive = activeClient;
-
-      clientSelect.innerHTML = '<option value="">— Highlight a Client —</option>';
-      allClients.forEach(c => {
-        const opt = document.createElement('option');
-        opt.value = c;
-        opt.textContent = c;
-        clientSelect.appendChild(opt);
-      });
-
-      // Preserve selection if possible
-      if (prevActive && allClients.includes(prevActive)) {
-        activeClient = prevActive;
-        clientSelect.value = prevActive;
-      } else if (!allClients.includes(activeClient)) {
-        activeClient = null;
-        clientSelect.value = '';
+  chart = new Chart(ctx,{
+    type:'line',
+    data:{ labels, datasets },
+    options:{
+      responsive:true,
+      scales:{
+        y:{ beginAtZero:true }
       }
     }
+  });
+}
 
-    function populateModules(data) {
-      const modules = [...new Set(
-        data.map(r => trim(pick(r, Fields.module))).filter(Boolean)
-      )].sort();
+function handleParsedResults(results){
+  csvData = (results.data || []).filter(r =>
+    r && pick(r, Fields.date) && pick(r, Fields.client)
+  );
+  render();
+}
 
-      moduleSelect.innerHTML = '<option value="">— All Modules —</option>';
-      modules.forEach(m => {
-        const opt = document.createElement('option');
-        opt.value = m;
-        opt.textContent = m;
-        moduleSelect.appendChild(opt);
-      });
+function parseCsvText(csvText){
+  Papa.parse(csvText,{
+    header:true,
+    skipEmptyLines:true,
+    transformHeader:h=>String(h).trim(),
+    transform:v=>(typeof v==='string'?v.trim():v),
+    complete:handleParsedResults
+  });
+}
 
-      // reset SubModule dropdown
-      subModuleSelect.innerHTML = '<option value="">— All SubModules —</option>';
-      subModuleSelect.disabled = true;
+fileInput.addEventListener('change',e=>{
+  const file = e.target.files?.[0];
+  if(!file) return;
+  Papa.parse(file,{
+    header:true,
+    skipEmptyLines:true,
+    transformHeader:h=>String(h).trim(),
+    transform:v=>(typeof v==='string'?v.trim():v),
+    complete:handleParsedResults
+  });
+});
+
+/* ===============================
+   SAFE DEFAULT CSV LOADING
+   Works local + GitHub Pages
+================================ */
+
+const DEFAULT_CSV_URL =
+  window.location.pathname.replace(/\/[^/]*$/, '/') +
+  'many_modules_part_level.csv';
+
+async function loadDefaultCsv(){
+  try{
+    const response = await fetch(DEFAULT_CSV_URL,{ cache:'no-store' });
+    if(!response.ok){
+      throw new Error(`Fetch failed: ${response.status}`);
     }
+    const csvText = await response.text();
+    parseCsvText(csvText);
+  }catch(err){
+    console.error('Auto-load CSV failed:',err);
+  }
+}
 
-    function populateSubModules(data, moduleValue) {
-      subModuleSelect.innerHTML = '<option value="">— All SubModules —</option>';
-      if (!moduleValue) {
-        subModuleSelect.disabled = true;
-        return;
-      }
-      const subs = [...new Set(
-        data
-          .filter(r => trim(pick(r, Fields.module)) === moduleValue)
-          .map(r => trim(pick(r, Fields.subModule)))
-          .filter(Boolean)
-      )].sort();
+window.addEventListener('DOMContentLoaded',()=>{
+  loadDefaultCsv();
+});
+</script>
 
-      subs.forEach(s => {
-        const opt = document.createElement('option');
-        opt.value = s;
-        opt.textContent = s;
-        subModuleSelect.appendChild(opt);
-      });
-
-      subModuleSelect.disabled = subs.length === 0;
-    }
-
-    // Build maps: client -> { dateStr -> value }
-    function buildMaps(data) {
-      const rateMap  = {};
-      const deltaMap = {};
-      data.forEach(row => {
-        const client = trim(pick(row, Fields.client));
-        const date   = trim(pick(row, Fields.date));
-        if (!client || !date) return;
-        const rate  = toNum(pick(row, Fields.rate));
-        const delta = toNum(pick(row, Fields.delta));
-        (rateMap[client]  ||= {})[date]  = rate;
-        (deltaMap[client] ||= {})[date]  = delta;
-      });
-      return { rateMap, deltaMap };
-    }
-
-    function buildLineDatasets(rateMap) {
-      return allClients.map((client,i) => {
-        const map = rateMap[client] || {};
-        const series = labelsSorted.map(lbl => map[lbl] ?? null);
-        const col = baseColors[i % baseColors.length];
-        return {
-          label: client + ' - Response Rate',
-          data: series,
-          type: 'line',
-          borderColor: col,
-          backgroundColor: col,
-          tension: 0.25,
-          pointRadius: 2,
-          borderWidth: 2,
-          spanGaps: true,
-          yAxisID: 'y',
-          order: 1,
-          baseColor: col // custom field for our highlight logic
-        };
-      });
-    }
-
-    function buildDeltaDataset(deltaMap, selectedClient) {
-      let dataAligned = [];
-      if (selectedClient) {
-        const map = deltaMap[selectedClient] || {};
-        dataAligned = labelsSorted.map(lbl => map[lbl] ?? null);
-      } else {
-        dataAligned = labelsSorted.map(lbl => {
-          let sum = 0, cnt = 0;
-          allClients.forEach(c => {
-            const v = (deltaMap[c] || {})[lbl];
-            if (v !== null && v !== undefined) {
-              sum += v;
-              cnt++;
-            }
-          });
-          return cnt ? sum / cnt : null;
-        });
-      }
-      return {
-        label: 'Submission Delta',
-        data: dataAligned,
-        type: 'bar',
-        backgroundColor: 'rgba(37, 99, 235, 0.25)',
-        borderColor: 'rgba(37, 99, 235, 0.8)',
-        borderWidth: 1,
-        yAxisID: 'y2',
-        order: 0,
-        categoryPercentage: 0.9,
-        barPercentage: 0.9,
-        maxBarThickness: 28,
-        borderRadius: 3,
-      };
-    }
-
-    function getSelectedClient(){ return activeClient || (clientSelect.value || null); }
-
-    function render(showDelta=false) {
-      const rows = getFilteredRows();
-
-      if (!rows.length) {
-        if (chart) chart.destroy();
-        statusEl.textContent = 'No data for this Module/SubModule selection.';
-        return;
-      }
-
-      computeLabels(rows);
-      populateClients(rows);
-      const { rateMap, deltaMap } = buildMaps(rows);
-      const datasets = buildLineDatasets(rateMap);
-      if (showDelta) datasets.push(buildDeltaDataset(deltaMap, getSelectedClient()));
-
-      if (chart) chart.destroy();
-      chart = new Chart(ctx, {
-        type: 'line',
-        data: { labels: labelsSorted, datasets },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          interaction: { mode: 'nearest', intersect: false },
-          plugins: {
-            legend: { display: false },
-            tooltip: { enabled: true }
-          },
-          scales: {
-            x: {
-              title: { display: true, text: 'Date' },
-              ticks: { color: '#111827' },
-              grid: { color: 'var(--grid)' }
-            },
-            y: {
-              title: { display: true, text: 'Response Rate (%)' },
-              beginAtZero: true,
-              position: 'left',
-              ticks: { color: '#111827' },
-              grid: { color: 'var(--grid)' }
-            },
-            y2: {
-              title: { display: showDelta, text: 'Submission Delta' },
-              beginAtZero: true,
-              position: 'right',
-              grid: { drawOnChartArea: false, color: 'var(--grid)' },
-              ticks: { color: '#111827' },
-              display: showDelta
-            }
-          },
-          // Click-to-highlight a line dataset
-          onClick: (evt) => {
-            const elems = chart.getElementsAtEventForMode(
-              evt,
-              'nearest',
-              { intersect: false },
-              true
-            );
-            if (!elems || !elems.length) return;
-            const { datasetIndex } = elems[0];
-            const ds = chart.data.datasets[datasetIndex];
-            if (!ds || ds.type !== 'line') return; // only lines are highlightable
-
-            const client = ds.label.replace(' - Response Rate','');
-            // Toggle highlight if same line clicked again
-            activeClient = (activeClient === client) ? null : client;
-            clientSelect.value = activeClient || '';
-            applyHighlight();
-
-            // Rebuild delta bar so it follows selected client when enabled
-            if (deltaToggle.checked) {
-              const rowsNow = getFilteredRows();
-              const { deltaMap } = buildMaps(rowsNow);
-              const bar = buildDeltaDataset(deltaMap, getSelectedClient());
-              // remove any existing bar dataset
-              chart.data.datasets = chart.data.datasets.filter(d => d.type !== 'bar');
-              chart.data.datasets.push(bar);
-              chart.update();
-            }
-            updateStatus();
-          }
-        }
-      });
-
-      applyHighlight();
-      updateStatus();
-    }
-
-    function applyHighlight() {
-      if (!chart) return;
-      const selected = getSelectedClient();
-      chart.data.datasets.forEach(ds => {
-        if (ds.type !== 'line') return;
-        const base = ds.baseColor || ds.borderColor;
-        if (!selected) {
-          ds.borderColor = hexToRgba(base, 1);
-          ds.pointRadius = 2;
-          ds.borderWidth = 2;
-          ds.order = 1;
-          return;
-        }
-        if (ds.label === (selected + ' - Response Rate')) {
-          ds.borderColor = hexToRgba(base, 1);
-          ds.pointRadius = 3;
-          ds.borderWidth = 5;
-          ds.order = 10; // draw on top
-        } else {
-          ds.borderColor = hexToRgba(base, 0.25);
-          ds.pointRadius = 1;
-          ds.borderWidth = 2;
-          ds.order = 1;
-        }
-      });
-      chart.update();
-    }
-
-    function updateStatus(){
-      const sel = getSelectedClient();
-      const m = moduleSelect.value || 'All Modules';
-      const s = (!subModuleSelect.disabled && subModuleSelect.value) ? subModuleSelect.value : 'All SubModules';
-      const deltaMsg = deltaToggle.checked
-        ? (sel ? `Delta bars: ${sel}` : 'Delta bars: average across clients')
-        : 'Delta bars hidden';
-      statusEl.textContent =
-        `Module: ${m} · SubModule: ${s} · ` +
-        `${sel ? `Highlighted: ${sel}` : 'No client highlighted'} · ${deltaMsg}.`;
-    }
-
-    const DEFAULT_CSV_URL = './many_modules_part_level.csv';
-
-    function handleParsedResults(results) {
-      csvData = (results.data || []).filter(r => r && pick(r, Fields.date) && pick(r, Fields.client));
-      if (!csvData.length) {
-        alert('No valid rows found. Check your headers.');
-        return;
-      }
-      activeClient = null; // reset highlight on new file
-      clientSelect.value = '';
-      populateModules(csvData);
-      render(deltaToggle.checked);
-    }
-
-    function parseCsvText(csvText) {
-      Papa.parse(csvText, {
-        header: true,
-        skipEmptyLines: true,
-        transformHeader: h => String(h).trim(),
-        transform: v => (typeof v === 'string' ? v.trim() : v),
-        complete: handleParsedResults,
-        error: (err) => {
-          console.error('CSV parse error:', err);
-          alert('Could not parse CSV. See console for details.');
-        }
-      });
-    }
-
-    // ---- Events ----
-    fileInput.addEventListener('change', (e) => {
-      const file = e.target.files?.[0];
-      if (!file) return;
-      Papa.parse(file, {
-        header: true,
-        skipEmptyLines: true,
-        transformHeader: h => String(h).trim(),
-        transform: v => (typeof v === 'string' ? v.trim() : v),
-        complete: handleParsedResults,
-        error: (err) => {
-          console.error('CSV parse error:', err);
-          alert('Could not parse CSV. See console for details.');
-        }
-      });
-    });
-
-    async function loadDefaultCsv() {
-      try {
-        const response = await fetch(DEFAULT_CSV_URL, { cache: 'no-store' });
-        if (!response.ok) {
-          throw new Error(`Fetch failed: ${response.status}`);
-        }
-        const csvText = await response.text();
-        parseCsvText(csvText);
-      } catch (err) {
-        console.error('Auto-load CSV failed:', err);
-      }
-    }
-
-    clientSelect.addEventListener('change', () => {
-      activeClient = clientSelect.value || null;
-      applyHighlight();
-      updateStatus();
-      if (deltaToggle.checked) render(true);
-    });
-
-    deltaToggle.addEventListener('change', () => {
-      render(deltaToggle.checked);
-    });
-
-    moduleSelect.addEventListener('change', () => {
-      // Reset client highlight when module changes
-      activeClient = null;
-      clientSelect.value = '';
-      // Update submodules for this module
-      const mVal = moduleSelect.value || null;
-      populateSubModules(csvData, mVal);
-      // Reset any submodule selection
-      if (!mVal) {
-        subModuleSelect.value = '';
-      }
-      render(deltaToggle.checked);
-    });
-
-    subModuleSelect.addEventListener('change', () => {
-      // Reset client highlight when submodule changes
-      activeClient = null;
-      clientSelect.value = '';
-      render(deltaToggle.checked);
-    });
-
-    window.addEventListener('DOMContentLoaded', () => {
-      loadDefaultCsv();
-    });
-  </script>
 </body>
 </html>
