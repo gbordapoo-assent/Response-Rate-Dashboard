@@ -4,6 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Response Rate by Client</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,400;0,500;0,600;0,700;1,500&display=swap" rel="stylesheet">
 
   <!-- Chart.js UMD (auto-registers all components) -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
@@ -12,75 +15,198 @@
 
   <style>
     :root{
-      /* Light theme */
-      --bg:#f6f8fc;           /* very light */
-      --panel:#ffffff;        /* white card */
-      --fg:#111827;           /* slate-900 */
-      --fg-muted:#4b5563;     /* slate-600 */
-      --grid:rgba(0,0,0,0.06);
+      --bg-start:#1f4f78;
+      --bg-end:#0aa5a4;
+      --panel:rgba(255,255,255,0.95);
+      --panel-border:rgba(255,255,255,0.24);
+      --fg:#0f2943;
+      --fg-muted:#40607f;
+      --white:#ffffff;
+      --grid:rgba(15,41,67,0.1);
+      --accent:#10b1b4;
     }
-    body { font-family: Arial, sans-serif; margin: 32px; background: var(--bg); color: var(--fg); }
-    h2 { text-align: center; font-size: 28px; margin-bottom: 16px; }
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Montserrat', Arial, sans-serif;
+      margin: 0;
+      min-height: 100vh;
+      color: var(--fg);
+      background: linear-gradient(120deg, var(--bg-start), var(--bg-end));
+      position: relative;
+      overflow-x: hidden;
+    }
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        radial-gradient(circle at 8% 20%, rgba(12, 43, 74, 0.28) 0 60px, transparent 61px),
+        radial-gradient(circle at 16% 65%, rgba(12, 43, 74, 0.22) 0 70px, transparent 71px),
+        radial-gradient(circle at 88% 22%, rgba(7, 55, 90, 0.2) 0 90px, transparent 91px),
+        radial-gradient(circle at 80% 72%, rgba(7, 55, 90, 0.16) 0 120px, transparent 121px);
+      pointer-events: none;
+      z-index: 0;
+    }
+    .dashboard {
+      position: relative;
+      z-index: 1;
+      width: min(1450px, 95vw);
+      margin: 28px auto;
+    }
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      color: var(--white);
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .logo-mark {
+      width: 34px;
+      height: 34px;
+      position: relative;
+      transform: rotate(180deg);
+    }
+    .logo-mark::before,
+    .logo-mark::after,
+    .logo-core {
+      content: '';
+      position: absolute;
+      width: 0;
+      height: 0;
+      border-left: 10px solid transparent;
+      border-right: 10px solid transparent;
+      border-top: 16px solid var(--white);
+    }
+    .logo-mark::before { top: 0; left: 7px; }
+    .logo-core { top: 11px; left: 0; opacity: 0.85; }
+    .logo-mark::after { top: 11px; left: 14px; opacity: 0.85; }
+    .brand-text {
+      font-size: 50px;
+      letter-spacing: 0.4px;
+      font-weight: 700;
+      line-height: 1;
+    }
+    .brand-tagline {
+      font-style: italic;
+      font-size: 22px;
+      opacity: 0.95;
+      text-align: right;
+      font-weight: 500;
+    }
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--panel-border);
+      border-radius: 18px;
+      backdrop-filter: blur(4px);
+      box-shadow: 0 20px 40px rgba(8, 24, 45, 0.3);
+      padding: 20px;
+    }
+    h2 {
+      text-align: center;
+      font-size: 30px;
+      margin: 4px 0 20px;
+      color: var(--fg);
+      font-weight: 700;
+    }
     .controls{
       display:flex;
       gap:12px;
       justify-content:center;
       align-items:center;
       flex-wrap:wrap;
-      margin-bottom:8px;
+      margin-bottom:12px;
     }
-    input[type="file"], select, label { font-size: 15px; }
-    select { padding:8px 10px; }
+    input[type="file"], select, label { font-size: 14px; font-weight: 500; }
+    select,
+    input[type="file"] {
+      padding:8px 10px;
+      border: 1px solid rgba(15,41,67,0.24);
+      border-radius: 8px;
+      background: #f8fbff;
+      color: var(--fg);
+    }
+    select:focus,
+    input[type="file"]:focus { outline: 2px solid rgba(16,177,180,0.5); }
     label { display:flex; gap:8px; align-items:center; }
     .status {
       text-align:center;
-      font-size: 18px;       /* bigger: treat as title */
-      font-weight: 600;      /* bold */
+      font-size: 16px;
+      font-weight: 600;
       color: var(--fg-muted);
-      margin: 6px 0 14px;
+      margin: 8px 0 14px;
     }
     .chart-container {
       position: relative;
-      width: 95%;
+      width: 100%;
       max-width: 1400px;
       height: 700px;
       margin: 0 auto;
-      background: var(--panel);
+      background: #ffffff;
       border-radius: 12px;
       padding: 20px;
-      box-shadow: 0 8px 24px rgba(16,24,40,0.08);
-      border: 1px solid rgba(0,0,0,0.06);
+      box-shadow: inset 0 0 0 1px rgba(15,41,67,0.06);
+      border: 1px solid rgba(15,41,67,0.08);
     }
     canvas { width: 100% !important; height: 100% !important; cursor: crosshair; }
+    @media (max-width: 880px) {
+      .top-bar {
+        justify-content: center;
+        text-align: center;
+      }
+      .brand-tagline {
+        width: 100%;
+        text-align: center;
+      }
+      .brand-text { font-size: 42px; }
+      .chart-container { height: 560px; }
+    }
   </style>
 </head>
 <body>
-  <h2>Response Rate by Client</h2>
+  <div class="dashboard">
+    <div class="top-bar">
+      <div class="brand" aria-label="Assent logo">
+        <div class="logo-mark"><span class="logo-core"></span></div>
+        <div class="brand-text">Assent</div>
+      </div>
+      <div class="brand-tagline">Faster Intelligence. Stronger Supply Chains.</div>
+    </div>
 
-  <div class="controls">
-    <input type="file" id="csvFile" accept=".csv" />
+    <div class="panel">
+      <h2>Response Rate by Client</h2>
 
-    <!-- Module / SubModule filters -->
-    <select id="moduleSelect">
-      <option value="">— All Modules —</option>
-    </select>
-    <select id="subModuleSelect" disabled>
-      <option value="">— All SubModules —</option>
-    </select>
+      <div class="controls">
+        <input type="file" id="csvFile" accept=".csv" />
 
-    <select id="clientSelect">
-      <option value="">— Highlight a Client —</option>
-    </select>
-    <label><input type="checkbox" id="deltaToggle"> Show Submission Delta</label>
-  </div>
+        <!-- Module / SubModule filters -->
+        <select id="moduleSelect">
+          <option value="">— All Modules —</option>
+        </select>
+        <select id="subModuleSelect" disabled>
+          <option value="">— All SubModules —</option>
+        </select>
 
-  <!-- This acts as the dynamic title, now larger -->
-  <div class="status" id="status">
-    Click a line to spotlight it. Others stay visible but lighter. Legend hidden to avoid clutter.
-  </div>
+        <select id="clientSelect">
+          <option value="">— Highlight a Client —</option>
+        </select>
+        <label><input type="checkbox" id="deltaToggle"> Show Submission Delta</label>
+      </div>
 
-  <div class="chart-container">
-    <canvas id="responseChart"></canvas>
+      <div class="status" id="status">
+        Click a line to spotlight it. Others stay visible but lighter. Legend hidden to avoid clutter.
+      </div>
+
+      <div class="chart-container">
+        <canvas id="responseChart"></canvas>
+      </div>
+    </div>
   </div>
 
   <script>
