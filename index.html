@@ -258,6 +258,8 @@
       date:   ['SnapshotDate','Snapshot Date','Date','snapshotdate'],
       client: ['ClientDBName','Client DB Name','Client','client','ClientName'],
       rate:   ['SubmissionRate','Submission Rate','ResponseRate','Response Rate','Rate'],
+      inScope:['InScopeCount','In Scope Count','InScope','ScopeCount'],
+      submitted:['SubmittedCount','Submitted Count','Submissions','Submitted'],
       // include both singular and plural spellings
       delta:  ['SubmissionsDelta','SubmissionDelta','Submission Delta','Delta','DeltaSubmission','Change'],
       module: ['ModuleName','Module Name','Module','module'],
@@ -377,15 +379,77 @@
     function buildMaps(data) {
       const rateMap  = {};
       const deltaMap = {};
+      const fallbackRate = {};
       data.forEach(row => {
         const client = trim(pick(row, Fields.client));
         const date   = trim(pick(row, Fields.date));
         if (!client || !date) return;
+
+        // Aggregate per client/date because a single client can have multiple
+        // rows for the same date (e.g., different submodules).
         const rate  = toNum(pick(row, Fields.rate));
         const delta = toNum(pick(row, Fields.delta));
-        (rateMap[client]  ||= {})[date]  = rate;
-        (deltaMap[client] ||= {})[date]  = delta;
+        const inScope = toNum(pick(row, Fields.inScope));
+        const submitted = toNum(pick(row, Fields.submitted));
+
+        const rateAgg = ((rateMap[client] ||= {})[date] ||= {
+          submitted: 0,
+          inScope: 0,
+          hasCounts: false,
+          samples: 0,
+          sumRate: 0
+        });
+
+        if (submitted !== null && inScope !== null) {
+          rateAgg.submitted += submitted;
+          rateAgg.inScope += inScope;
+          rateAgg.hasCounts = true;
+        }
+        if (rate !== null) {
+          rateAgg.samples += 1;
+          rateAgg.sumRate += rate;
+        }
+
+        const deltaAgg = ((deltaMap[client] ||= {})[date] ||= {
+          sum: 0,
+          samples: 0
+        });
+        if (delta !== null) {
+          deltaAgg.sum += delta;
+          deltaAgg.samples += 1;
+        }
+
+        // If counts are unavailable, keep average submission rate as fallback.
+        if (rate !== null) {
+          ((fallbackRate[client] ||= {})[date] ||= []).push(rate);
+        }
       });
+
+      Object.keys(rateMap).forEach(client => {
+        Object.keys(rateMap[client]).forEach(date => {
+          const entry = rateMap[client][date];
+          if (entry.hasCounts && entry.inScope > 0) {
+            rateMap[client][date] = (entry.submitted / entry.inScope) * 100;
+            return;
+          }
+          if (entry.samples > 0) {
+            rateMap[client][date] = entry.sumRate / entry.samples;
+            return;
+          }
+          const fallback = (fallbackRate[client] || {})[date] || [];
+          rateMap[client][date] = fallback.length
+            ? fallback.reduce((a,b)=>a+b,0) / fallback.length
+            : null;
+        });
+      });
+
+      Object.keys(deltaMap).forEach(client => {
+        Object.keys(deltaMap[client]).forEach(date => {
+          const entry = deltaMap[client][date];
+          deltaMap[client][date] = entry.samples ? entry.sum : null;
+        });
+      });
+
       return { rateMap, deltaMap };
     }
 
@@ -579,9 +643,12 @@
         ? (sel ? `Delta bars: ${sel}` : 'Delta bars: average across clients')
         : 'Delta bars hidden';
       const gridMsg = gridToggle.checked ? 'Grid visible' : 'Grid hidden';
+      const baseMsg = (!moduleSelect.value && subModuleSelect.disabled)
+        ? 'Showing all modules/submodules aggregated by client/date'
+        : 'Showing selected scope';
       statusEl.textContent =
         `Module: ${m} · SubModule: ${s} · ` +
-        `${sel ? `Highlighted: ${sel}` : 'No client highlighted'} · ${deltaMsg} · ${gridMsg}.`;
+        `${sel ? `Highlighted: ${sel}` : 'No client highlighted'} · ${deltaMsg} · ${gridMsg} · ${baseMsg}.`;
     }
 
     const DEFAULT_CSV_URL = './many_modules_part_level.csv';
