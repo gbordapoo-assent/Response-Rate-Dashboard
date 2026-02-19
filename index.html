@@ -399,7 +399,8 @@
           borderColor: col,
           backgroundColor: col,
           tension: 0.25,
-          pointRadius: 2,
+          pointRadius: 0,
+          pointHoverRadius: 0,
           borderWidth: 2,
           spanGaps: true,
           yAxisID: 'y',
@@ -540,19 +541,16 @@
         const base = ds.baseColor || ds.borderColor;
         if (!selected) {
           ds.borderColor = hexToRgba(base, 1);
-          ds.pointRadius = 2;
           ds.borderWidth = 2;
           ds.order = 1;
           return;
         }
         if (ds.label === (selected + ' - Response Rate')) {
           ds.borderColor = hexToRgba(base, 1);
-          ds.pointRadius = 3;
           ds.borderWidth = 5;
           ds.order = 10; // draw on top
         } else {
           ds.borderColor = hexToRgba(base, 0.25);
-          ds.pointRadius = 1;
           ds.borderWidth = 2;
           ds.order = 1;
         }
