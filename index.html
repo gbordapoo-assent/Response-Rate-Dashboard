@@ -197,6 +197,7 @@
           <option value="">— Highlight a Client —</option>
         </select>
         <label><input type="checkbox" id="deltaToggle"> Show Submission Delta</label>
+        <label><input type="checkbox" id="gridToggle" checked> Show Grid</label>
       </div>
 
       <div class="status" id="status">
@@ -213,6 +214,7 @@
     const fileInput      = document.getElementById('csvFile');
     const clientSelect   = document.getElementById('clientSelect');
     const deltaToggle    = document.getElementById('deltaToggle');
+    const gridToggle     = document.getElementById('gridToggle');
     const moduleSelect   = document.getElementById('moduleSelect');
     const subModuleSelect= document.getElementById('subModuleSelect');
     const statusEl       = document.getElementById('status');
@@ -448,6 +450,7 @@
 
     function render(showDelta=false) {
       const rows = getFilteredRows();
+      const showGrid = gridToggle.checked;
 
       if (!rows.length) {
         if (chart) chart.destroy();
@@ -477,20 +480,30 @@
             x: {
               title: { display: true, text: 'Date' },
               ticks: { color: '#111827' },
-              grid: { color: 'var(--grid)' }
+              grid: {
+                display: showGrid,
+                color: 'var(--grid)'
+              }
             },
             y: {
               title: { display: true, text: 'Response Rate (%)' },
               beginAtZero: true,
               position: 'left',
               ticks: { color: '#111827' },
-              grid: { color: 'var(--grid)' }
+              grid: {
+                display: showGrid,
+                color: 'var(--grid)'
+              }
             },
             y2: {
               title: { display: showDelta, text: 'Submission Delta' },
               beginAtZero: true,
               position: 'right',
-              grid: { drawOnChartArea: false, color: 'var(--grid)' },
+              grid: {
+                display: showGrid,
+                drawOnChartArea: false,
+                color: 'var(--grid)'
+              },
               ticks: { color: '#111827' },
               display: showDelta
             }
@@ -565,9 +578,10 @@
       const deltaMsg = deltaToggle.checked
         ? (sel ? `Delta bars: ${sel}` : 'Delta bars: average across clients')
         : 'Delta bars hidden';
+      const gridMsg = gridToggle.checked ? 'Grid visible' : 'Grid hidden';
       statusEl.textContent =
         `Module: ${m} · SubModule: ${s} · ` +
-        `${sel ? `Highlighted: ${sel}` : 'No client highlighted'} · ${deltaMsg}.`;
+        `${sel ? `Highlighted: ${sel}` : 'No client highlighted'} · ${deltaMsg} · ${gridMsg}.`;
     }
 
     const DEFAULT_CSV_URL = './many_modules_part_level.csv';
@@ -636,6 +650,10 @@
     });
 
     deltaToggle.addEventListener('change', () => {
+      render(deltaToggle.checked);
+    });
+
+    gridToggle.addEventListener('change', () => {
       render(deltaToggle.checked);
     });
 
